@@ -1,0 +1,841 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>LYRIX — AI Lyric Architect</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=IBM+Plex+Mono:ital,wght@0,300;0,400;0,500;1,300&family=Barlow+Condensed:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+
+<style>
+:root {
+  --bg:         #050507;
+  --s0:         #09090C;
+  --s1:         #0E0E13;
+  --s2:         #161619;
+  --s3:         #3A3A46;
+  --s4:         #4A4A58;
+  --accent:     #E8A020;
+  --accent-dim: rgba(232,160,32,0.12);
+  --accent-glow:rgba(232,160,32,0.35);
+  --text1:      #F0EDE6;
+  --text2:      #BAB5AE;
+  --text3:      #807A74;
+  --ok:         #3DCC7E;
+  --warn:       #FFB84D;
+  --err:        #FF4D4D;
+  --r:          3px;
+  --mono:       'IBM Plex Mono', monospace;
+  --disp:       'Bebas Neue', sans-serif;
+  --sans:       'Barlow Condensed', sans-serif;
+  --trans:      0.18s ease;
+}
+
+*,*::before,*::after { box-sizing:border-box; margin:0; padding:0; }
+html { scroll-behavior:smooth; }
+
+body {
+  background:var(--bg);
+  color:var(--text1);
+  font-family:var(--mono);
+  min-height:100vh;
+  overflow-x:hidden;
+}
+
+/* ── Noise & grid atmosphere ── */
+body::before {
+  content:'';
+  position:fixed; inset:0; z-index:9999; pointer-events:none;
+  background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.035'/%3E%3C/svg%3E");
+  opacity:.5;
+}
+body::after {
+  content:'';
+  position:fixed; inset:0; z-index:0; pointer-events:none;
+  background-image:
+    linear-gradient(rgba(232,160,32,0.018) 1px,transparent 1px),
+    linear-gradient(90deg,rgba(232,160,32,0.018) 1px,transparent 1px);
+  background-size:48px 48px;
+}
+
+/* ── Layout ── */
+.wrap {
+  max-width:920px;
+  margin:0 auto;
+  padding:0 28px 100px;
+  position:relative; z-index:1;
+}
+
+/* ── Header ── */
+header {
+  padding:64px 0 0;
+  animation:fadeUp .9s ease both;
+}
+
+.hd-row {
+  display:flex;
+  align-items:flex-end;
+  justify-content:space-between;
+  margin-bottom:6px;
+}
+
+.brand {
+  font-family:var(--disp);
+  font-size:clamp(64px,11vw,108px);
+  line-height:.88;
+  letter-spacing:.015em;
+  color:var(--text1);
+}
+.brand em { color:var(--accent); font-style:normal; }
+
+.build-tag {
+  font-family:var(--mono);
+  font-size:9px;
+  color:var(--text3);
+  letter-spacing:.22em;
+  text-transform:uppercase;
+  padding-bottom:10px;
+}
+
+.tagline {
+  font-family:var(--sans);
+  font-size:12px;
+  font-weight:300;
+  letter-spacing:.35em;
+  text-transform:uppercase;
+  color:var(--text2);
+  margin:12px 0 28px;
+}
+
+/* Waveform */
+.wf {
+  display:flex;
+  align-items:center;
+  gap:3px;
+  height:36px;
+  margin-bottom:0;
+}
+.wf-bar {
+  width:3px;
+  background:var(--accent);
+  border-radius:2px;
+  opacity:.18;
+  animation:wv 1.5s ease-in-out infinite;
+  transform-origin:bottom;
+}
+.wf.active .wf-bar { opacity:.8; }
+@keyframes wv {
+  0%,100%{ transform:scaleY(1); }
+  50%    { transform:scaleY(.22); }
+}
+
+.sep {
+  height:1px;
+  background:linear-gradient(90deg,var(--accent) 0%,rgba(232,160,32,.15) 55%,transparent 100%);
+  margin:28px 0 36px;
+  transform-origin:left;
+  animation:lineGrow .9s ease .2s both;
+}
+@keyframes lineGrow {
+  from{ transform:scaleX(0); } to{ transform:scaleX(1); }
+}
+
+/* ── Panel ── */
+.panel {
+  background:var(--s1);
+  border:1px solid var(--s3);
+  border-radius:var(--r);
+  padding:28px 28px 24px;
+  margin-bottom:14px;
+  position:relative;
+  overflow:hidden;
+  animation:fadeUp .8s ease both;
+}
+.panel::before {
+  content:'';
+  position:absolute;
+  top:0; left:0; right:0; height:1px;
+  background:linear-gradient(90deg,var(--accent),transparent 70%);
+  opacity:.45;
+}
+.panel:nth-child(1){ animation-delay:.05s; }
+.panel:nth-child(2){ animation-delay:.12s; }
+.panel:nth-child(3){ animation-delay:.19s; }
+.panel:nth-child(4){ animation-delay:.26s; }
+
+.plabel {
+  font-family:var(--sans);
+  font-size:9px; font-weight:700;
+  letter-spacing:.38em;
+  text-transform:uppercase;
+  color:var(--accent);
+  margin-bottom:22px;
+  display:flex; align-items:center; gap:10px;
+}
+.plabel::after { content:''; flex:1; height:1px; background:var(--s4); }
+
+/* ── Fields ── */
+.field { margin-bottom:22px; }
+.field:last-child { margin-bottom:0; }
+
+.flabel {
+  display:flex; align-items:center; justify-content:space-between;
+  font-family:var(--sans);
+  font-size:9px; font-weight:600;
+  letter-spacing:.28em;
+  text-transform:uppercase;
+  color:var(--text2);
+  margin-bottom:8px;
+}
+.flabel-hint {
+  font-weight:400; letter-spacing:.1em; text-transform:none;
+  font-family:var(--mono); font-size:9px;
+}
+
+.fhint {
+  font-family:var(--mono);
+  font-size:10px;
+  color:var(--text3);
+  margin-top:6px;
+  line-height:1.5;
+}
+
+/* ── Inputs ── */
+input[type=password],input[type=text],textarea {
+  width:100%;
+  padding:12px 14px;
+  background:var(--s0);
+  color:var(--text1);
+  border:1px solid var(--s4);
+  border-radius:var(--r);
+  font-family:var(--mono);
+  font-size:13px;
+  outline:none;
+  transition:border-color var(--trans), box-shadow var(--trans);
+  -webkit-appearance:none;
+}
+input[type=password]:focus,input[type=text]:focus,textarea:focus {
+  border-color:var(--accent);
+  box-shadow:0 0 0 3px var(--accent-dim);
+}
+textarea {
+  resize:vertical; min-height:88px; line-height:1.65;
+}
+::placeholder { color:var(--text3); font-style:italic; }
+
+/* Key row */
+.key-wrap { position:relative; }
+.key-wrap input { padding-right:52px; }
+.key-toggle {
+  position:absolute; right:12px; top:50%;
+  transform:translateY(-50%);
+  background:none; border:none;
+  color:var(--text3);
+  font-family:var(--mono); font-size:10px; letter-spacing:.1em;
+  cursor:pointer;
+  padding:4px 2px;
+  transition:color var(--trans);
+  width:auto;
+}
+.key-toggle:hover { color:var(--accent); }
+
+.save-row {
+  display:flex; align-items:center; gap:8px;
+  margin-top:8px;
+}
+.save-row input[type=checkbox] { width:13px; height:13px; accent-color:var(--accent); }
+.save-row label { font-family:var(--mono); font-size:10px; color:var(--text3); cursor:pointer; }
+
+/* ── Genre pills ── */
+.genre-grid {
+  display:flex; flex-wrap:wrap; gap:8px;
+}
+.gp input { display:none; }
+.gp label {
+  display:block;
+  padding:7px 16px;
+  font-family:var(--sans);
+  font-size:12px; font-weight:500;
+  letter-spacing:.18em;
+  text-transform:uppercase;
+  color:var(--text2);
+  border:1px solid var(--s4);
+  border-radius:2px;
+  cursor:pointer;
+  transition:all var(--trans);
+  user-select:none;
+}
+.gp label:hover { border-color:var(--text3); color:var(--text1); }
+.gp input:checked + label {
+  background:var(--accent-dim);
+  border-color:var(--accent);
+  color:var(--accent);
+}
+
+/* ── Generate button ── */
+.btn-gen {
+  width:100%;
+  padding:18px 24px;
+  background:var(--accent);
+  color:#000;
+  border:none;
+  border-radius:var(--r);
+  font-family:var(--disp);
+  font-size:26px;
+  letter-spacing:.07em;
+  cursor:pointer;
+  position:relative; overflow:hidden;
+  transition:transform var(--trans), box-shadow var(--trans), background var(--trans);
+}
+.btn-gen::after {
+  content:'';
+  position:absolute; inset:0;
+  background:linear-gradient(135deg,rgba(255,255,255,.16) 0%,transparent 55%);
+  pointer-events:none;
+}
+.btn-gen:hover:not(:disabled) {
+  transform:translateY(-2px);
+  box-shadow:0 10px 40px var(--accent-glow);
+}
+.btn-gen:active:not(:disabled) { transform:translateY(0); box-shadow:0 3px 10px var(--accent-glow); }
+.btn-gen:disabled { background:var(--s2); color:var(--text3); cursor:not-allowed; transform:none; box-shadow:none; }
+.btn-gen.loading { background:var(--s2); color:var(--accent); cursor:wait; }
+.btn-txt  { display:block; }
+.btn-load { display:none; align-items:center; justify-content:center; gap:10px; font-family:var(--mono); font-size:12px; letter-spacing:.2em; }
+.btn-gen.loading .btn-txt  { display:none; }
+.btn-gen.loading .btn-load { display:flex; }
+
+.spinner {
+  width:13px; height:13px;
+  border:2px solid var(--s4);
+  border-top-color:var(--accent);
+  border-radius:50%;
+  animation:spin .65s linear infinite;
+}
+@keyframes spin{ to{ transform:rotate(360deg); } }
+
+/* ── Rate bar ── */
+.rate-row {
+  display:flex; align-items:center; gap:10px;
+  margin-top:14px;
+}
+.rate-lbl {
+  font-family:var(--sans);
+  font-size:9px; font-weight:600;
+  letter-spacing:.25em;
+  text-transform:uppercase;
+  color:var(--text3);
+  white-space:nowrap;
+}
+.rate-track {
+  flex:1; height:2px;
+  background:var(--s4);
+  border-radius:2px; overflow:hidden;
+}
+.rate-fill {
+  height:100%;
+  background:var(--accent);
+  border-radius:2px;
+  transition:width .5s ease;
+}
+.rate-num {
+  font-family:var(--mono);
+  font-size:10px; color:var(--text3);
+  min-width:30px; text-align:right;
+}
+
+/* ── Messages ── */
+.msg {
+  display:none;
+  padding:12px 16px;
+  border-radius:var(--r);
+  font-family:var(--mono);
+  font-size:11px; line-height:1.6;
+  margin-top:12px;
+  animation:fadeIn .3s ease;
+}
+.msg.error { display:block; background:rgba(255,77,77,.07); border:1px solid rgba(255,77,77,.3); color:var(--err); }
+.msg.warn  { display:block; background:rgba(255,184,77,.07); border:1px solid rgba(255,184,77,.3); color:var(--warn); }
+
+/* ── Output ── */
+.out-empty {
+  text-align:center;
+  padding:56px 24px;
+  color:var(--text3);
+  font-family:var(--mono);
+  font-size:11px; line-height:2.2;
+}
+.out-empty .ico { font-size:30px; display:block; margin-bottom:12px; opacity:.3; }
+
+/* Stats */
+.stats-row {
+  display:grid;
+  grid-template-columns:repeat(4,1fr);
+  gap:10px;
+  margin-bottom:18px;
+}
+.stat {
+  background:var(--s0);
+  border:1px solid var(--s3);
+  border-radius:var(--r);
+  padding:14px 10px;
+  text-align:center;
+}
+.stat-v {
+  font-family:var(--disp);
+  font-size:32px; line-height:1;
+  color:var(--accent);
+  margin-bottom:5px;
+}
+.stat-l {
+  font-family:var(--sans);
+  font-size:9px; font-weight:600;
+  letter-spacing:.22em;
+  text-transform:uppercase;
+  color:var(--text3);
+}
+
+/* Quality */
+.q-row {
+  display:flex; align-items:center; gap:12px;
+  padding:12px 16px;
+  background:var(--s0);
+  border:1px solid var(--s3);
+  border-radius:var(--r);
+  margin-bottom:22px;
+}
+.q-lbl {
+  font-family:var(--sans);
+  font-size:9px; font-weight:700;
+  letter-spacing:.28em;
+  text-transform:uppercase;
+  color:var(--text3);
+  white-space:nowrap;
+}
+.q-track { flex:1; height:3px; background:var(--s4); border-radius:3px; overflow:hidden; }
+.q-fill  { height:100%; border-radius:3px; transition:width 1.2s ease; }
+.q-fill.poor { background:var(--err); }
+.q-fill.fair { background:var(--warn); }
+.q-fill.good { background:var(--ok); }
+.q-score { font-family:var(--mono); font-size:11px; white-space:nowrap; }
+.q-score.poor { color:var(--err); }
+.q-score.fair { color:var(--warn); }
+.q-score.good { color:var(--ok); }
+
+/* Style block */
+.style-blk {
+  background:var(--s0);
+  border:1px solid var(--s3);
+  border-left:2px solid var(--accent);
+  border-radius:var(--r);
+  padding:16px 20px;
+  margin-bottom:24px;
+  font-family:var(--mono);
+  font-size:12px; line-height:1.75;
+  color:var(--text2);
+}
+.style-hd {
+  font-family:var(--sans);
+  font-size:9px; font-weight:700;
+  letter-spacing:.28em; text-transform:uppercase;
+  color:var(--accent); margin-bottom:10px;
+}
+
+/* Sections */
+.lsec {
+  margin-bottom:28px;
+  animation:fadeUp .5s ease both;
+}
+.sec-hd {
+  font-family:var(--sans);
+  font-size:9px; font-weight:700;
+  letter-spacing:.32em; text-transform:uppercase;
+  color:var(--text3);
+  display:flex; align-items:center; gap:10px;
+  margin-bottom:14px;
+}
+.sec-hd::before { content:''; width:14px; height:2px; background:var(--accent); flex-shrink:0; }
+.sec-body {
+  font-family:var(--mono);
+  font-size:13px; line-height:2.1;
+  color:var(--text1);
+  white-space:pre-wrap;
+  border-left:1px solid var(--s4);
+  padding-left:22px;
+}
+.raw-txt {
+  font-family:var(--mono);
+  font-size:13px; line-height:2.1;
+  color:var(--text1);
+  white-space:pre-wrap;
+}
+
+/* Actions */
+.out-actions {
+  display:flex; gap:10px; flex-wrap:wrap;
+  margin-top:28px;
+  padding-top:22px;
+  border-top:1px solid var(--s3);
+}
+.btn-act {
+  padding:10px 18px;
+  background:var(--s0);
+  color:var(--text2);
+  border:1px solid var(--s4);
+  border-radius:var(--r);
+  font-family:var(--mono);
+  font-size:10px; letter-spacing:.12em;
+  cursor:pointer;
+  transition:all var(--trans);
+}
+.btn-act:hover { border-color:var(--accent); color:var(--accent); }
+.btn-act.copied { border-color:var(--ok); color:var(--ok); }
+.model-badge {
+  margin-left:auto;
+  font-family:var(--mono);
+  font-size:9px; color:var(--text3);
+  align-self:center;
+  letter-spacing:.1em;
+}
+
+/* ── Skeleton ── */
+.skel {
+  background:linear-gradient(90deg,var(--s2) 25%,var(--s3) 50%,var(--s2) 75%);
+  background-size:300% 100%;
+  animation:shim 1.6s infinite;
+  border-radius:var(--r);
+}
+@keyframes shim{ 0%{background-position:200% 0} 100%{background-position:-200% 0} }
+.skel-line { height:11px; margin-bottom:12px; }
+
+/* ── Footer ── */
+footer {
+  text-align:center;
+  padding:48px 0 24px;
+  font-family:var(--mono);
+  font-size:9px; letter-spacing:.22em;
+  color:var(--text3);
+  text-transform:uppercase;
+}
+
+/* ── Animations ── */
+@keyframes fadeUp  { from{opacity:0;transform:translateY(18px)} to{opacity:1;transform:translateY(0)} }
+@keyframes fadeIn  { from{opacity:0} to{opacity:1} }
+
+/* ── Scrollbar ── */
+::-webkit-scrollbar{ width:5px; }
+::-webkit-scrollbar-track{ background:var(--s0); }
+::-webkit-scrollbar-thumb{ background:var(--s4); border-radius:3px; }
+::-webkit-scrollbar-thumb:hover{ background:var(--text3); }
+
+/* ── Responsive ── */
+@media(max-width:600px){
+  .stats-row{ grid-template-columns:repeat(2,1fr); }
+  .hd-row{ flex-direction:column; align-items:flex-start; gap:4px; }
+  .brand{ font-size:68px; }
+  .panel{ padding:22px 18px 18px; }
+  .out-actions{ flex-direction:column; }
+  .model-badge{ margin-left:0; }
+}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <!-- HEADER -->
+  <header>
+    <div class="hd-row">
+      <div class="brand">LYR<em>I</em>X</div>
+      <span class="build-tag">v2.0.0 &nbsp;·&nbsp; Stable Build</span>
+    </div>
+    <p class="tagline">AI-Powered Lyric Architect &nbsp;·&nbsp; Gemini 2.5</p>
+    <div class="wf" id="wf"></div>
+    <div class="sep"></div>
+  </header>
+
+  <!-- ① CONFIG -->
+  <div class="panel">
+    <div class="plabel">Configuration</div>
+
+    <div class="field">
+      <div class="flabel">Gemini API Key</div>
+      <div class="key-wrap">
+        <input type="password" id="key" placeholder="AIza•••••••••••••••••••••••••••••••••••">
+        <button class="key-toggle" id="kt" onclick="toggleKey()">SHOW</button>
+      </div>
+      <div class="save-row">
+        <input type="checkbox" id="sk" onchange="handleSave()">
+        <label for="sk">Remember key in this browser (localStorage)</label>
+      </div>
+    </div>
+
+    <div class="field">
+      <div class="flabel">
+        Concept / Theme
+        <span class="flabel-hint" id="cc">0 / 300</span>
+      </div>
+      <textarea id="concept" placeholder="Describe a vibe, story, emotion, or imagery — leave blank for autonomous generation." maxlength="300" oninput="updateCC()"></textarea>
+      <p class="fhint">Optional. The more specific, the more personalised the output.</p>
+    </div>
+
+    <div class="field">
+      <div class="flabel">Genre</div>
+      <div class="genre-grid">
+        <div class="gp"><input type="radio" name="g" id="gTrap"  value="Trap"      checked><label for="gTrap">Trap</label></div>
+        <div class="gp"><input type="radio" name="g" id="gDrill" value="Drill"            ><label for="gDrill">Drill</label></div>
+        <div class="gp"><input type="radio" name="g" id="gHH"    value="Hip-Hop"          ><label for="gHH">Hip-Hop</label></div>
+        <div class="gp"><input type="radio" name="g" id="gRnB"   value="R&amp;B"          ><label for="gRnB">R&amp;B</label></div>
+        <div class="gp"><input type="radio" name="g" id="gAfro"  value="Afrobeats"        ><label for="gAfro">Afrobeats</label></div>
+        <div class="gp"><input type="radio" name="g" id="gSoul"  value="Neo-Soul"         ><label for="gSoul">Neo-Soul</label></div>
+        <div class="gp"><input type="radio" name="g" id="gPop"   value="Pop Rap"          ><label for="gPop">Pop Rap</label></div>
+        <div class="gp"><input type="radio" name="g" id="gCloud" value="Cloud Rap"        ><label for="gCloud">Cloud Rap</label></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ② GENERATE -->
+  <div class="panel">
+    <div class="plabel">Generate</div>
+
+    <button class="btn-gen" id="genBtn" onclick="generate()">
+      <span class="btn-txt">GENERATE LYRICS</span>
+      <span class="btn-load"><span class="spinner"></span>GENERATING…</span>
+    </button>
+
+    <div class="rate-row">
+      <span class="rate-lbl">Requests / Min</span>
+      <div class="rate-track"><div class="rate-fill" id="rf" style="width:0%"></div></div>
+      <span class="rate-num" id="rn">0 / 3</span>
+    </div>
+
+    <div class="msg" id="msg"></div>
+  </div>
+
+  <!-- ③ OUTPUT -->
+  <div class="panel" id="outPanel">
+    <div class="plabel">Output</div>
+    <div id="out">
+      <div class="out-empty">
+        <span class="ico">🎙</span>
+        Configure and run generation above — your lyrics will appear here.
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<footer>LYRIX Engine &nbsp;·&nbsp; Gemini 2.5 Flash &nbsp;·&nbsp; AI Lyric Architect</footer>
+
+<script>
+/* ── Constants ── */
+const MODEL_PRI  = 'gemini-2.5-flash';
+const MODEL_FALL = 'gemini-2.5-flash-lite';
+const MAX_RPM    = 3;
+const RL_KEY     = 'lyrix_rl';
+const SK_KEY     = 'lyrix_key';
+
+/* ── Waveform bars ── */
+const WF_HEIGHTS = [8,20,30,15,24,10,28,18,12,26,8,22,16,32,10,24,18,12,28,16];
+;(function init(){
+  const wf = document.getElementById('wf');
+  WF_HEIGHTS.forEach((h,i) => {
+    const b = document.createElement('div');
+    b.className = 'wf-bar';
+    b.style.cssText = `height:${h}px;animation-delay:${(i*0.07).toFixed(2)}s`;
+    wf.appendChild(b);
+  });
+
+  const saved = localStorage.getItem(SK_KEY);
+  if(saved){ document.getElementById('key').value = saved; document.getElementById('sk').checked = true; }
+
+  updateRateUI();
+})();
+
+/* ── Helpers ── */
+function updateCC(){
+  const v = document.getElementById('concept').value.length;
+  document.getElementById('cc').textContent = `${v} / 300`;
+}
+
+function toggleKey(){
+  const inp = document.getElementById('key'), btn = document.getElementById('kt');
+  inp.type = inp.type === 'password' ? 'text' : 'password';
+  btn.textContent = inp.type === 'password' ? 'SHOW' : 'HIDE';
+}
+
+function handleSave(){
+  const val = document.getElementById('key').value;
+  document.getElementById('sk').checked
+    ? localStorage.setItem(SK_KEY, val)
+    : localStorage.removeItem(SK_KEY);
+}
+
+function esc(s){ return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+
+/* ── Rate limit ── */
+function getRLD(){ const now=Date.now(); return (JSON.parse(localStorage.getItem(RL_KEY)||'[]')).filter(t=>now-t<60000); }
+function rateLimit(){
+  const d = getRLD();
+  if(d.length >= MAX_RPM) return false;
+  d.push(Date.now());
+  localStorage.setItem(RL_KEY, JSON.stringify(d));
+  return true;
+}
+function updateRateUI(){
+  const d = getRLD(), u = d.length, pct = (u/MAX_RPM)*100;
+  document.getElementById('rf').style.width = pct + '%';
+  document.getElementById('rn').textContent = `${u} / ${MAX_RPM}`;
+}
+
+/* ── Waveform state ── */
+function setWF(active){ document.getElementById('wf').classList.toggle('active', active); }
+
+/* ── Messages ── */
+function showMsg(t, type){ const el=document.getElementById('msg'); el.className=`msg ${type}`; el.textContent=t; }
+function clearMsg(){ const el=document.getElementById('msg'); el.className='msg'; el.textContent=''; }
+
+/* ── Skeleton ── */
+function skeleton(){
+  const w=[85,70,92,60,78,88,65,72,50,80,68,55];
+  document.getElementById('out').innerHTML = w.map(x=>`<div class="skel skel-line" style="width:${x}%"></div>`).join('');
+}
+
+/* ── Generate ── */
+async function generate(){
+  clearMsg();
+  const key = document.getElementById('key').value.trim();
+  const concept = document.getElementById('concept').value.trim();
+  const genre = document.querySelector('input[name=g]:checked')?.value || 'Trap';
+
+  if(!key){ showMsg('⚠ Please enter your Gemini API key.','warn'); return; }
+  if(!rateLimit()){ showMsg('⚠ Rate limit reached (3 req/min). Please wait a moment.','warn'); updateRateUI(); return; }
+
+  const btn = document.getElementById('genBtn');
+  btn.classList.add('loading'); btn.disabled = true;
+  setWF(true); skeleton(); updateRateUI();
+
+  const prompt = `You are LYRIX, a world-class AI lyric architect specialising in ${genre}.
+
+${concept ? `CONCEPT: ${concept}` : 'Choose your own compelling concept and theme.'}
+
+Generate a complete, original ${genre} song with:
+- A creative song title
+- Style notes (BPM, production feel, vocal delivery, influences)
+- Intro (4–8 lines)
+- Verse 1 (12–16 lines)
+- Pre-Chorus (4–6 lines)
+- Chorus (6–8 lines, highly memorable hook)
+- Verse 2 (12–16 lines)
+- Bridge (6–8 lines)
+- Outro (4–6 lines)
+
+Quality targets:
+- Sophisticated internal rhyme schemes, multisyllabic rhymes
+- Vivid, original metaphors — no clichés
+- Authentic ${genre} vernacular and flow patterns
+- Emotional arc across the song
+
+Format your response as structured JSON:
+{
+  "title": "...",
+  "genre": "...",
+  "bpm": 000,
+  "style": "...",
+  "quality": 85,
+  "sections": [
+    { "name": "Intro", "lyrics": "..." },
+    { "name": "Verse 1", "lyrics": "..." },
+    ...
+  ]
+}
+Only output valid JSON, no markdown fences.`;
+
+  let model = MODEL_PRI;
+  try {
+    let res = await callGemini(key, model, prompt);
+    if(!res.ok && res.status === 429){ model = MODEL_FALL; res = await callGemini(key, model, prompt); }
+    if(!res.ok){ const e=await res.json(); throw new Error(e.error?.message||`HTTP ${res.status}`); }
+
+    const raw = await res.json();
+    const text = raw.candidates?.[0]?.content?.parts?.[0]?.text || '';
+    let data;
+    try { data = JSON.parse(text.replace(/```json|```/g,'').trim()); }
+    catch { data = null; }
+
+    if(data && data.sections){ renderStructured(data, model); }
+    else { renderRaw(text, model); }
+
+  } catch(err){
+    showMsg(`Error: ${err.message}`, 'error');
+    document.getElementById('out').innerHTML = `<div class="out-empty"><span class="ico">⚠</span>${esc(err.message)}</div>`;
+  } finally {
+    btn.classList.remove('loading'); btn.disabled = false;
+    setWF(false); updateRateUI();
+  }
+}
+
+function callGemini(key, model, prompt){
+  return fetch(`https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${key}`,{
+    method:'POST',
+    headers:{'Content-Type':'application/json'},
+    body:JSON.stringify({ contents:[{ parts:[{ text:prompt }] }], generationConfig:{ temperature:1.1, maxOutputTokens:2048 } })
+  });
+}
+
+/* ── Render ── */
+function renderStructured(d, model){
+  const q = d.quality||75;
+  const qClass = q>=80?'good':q>=60?'fair':'poor';
+  const words = d.sections.reduce((a,s)=>a+(s.lyrics?.split(/\s+/).length||0),0);
+  const lines = d.sections.reduce((a,s)=>a+(s.lyrics?.split('\n').length||0),0);
+
+  let html = `
+  <div class="stats-row">
+    <div class="stat"><div class="stat-v">${d.sections.length}</div><div class="stat-l">Sections</div></div>
+    <div class="stat"><div class="stat-v">${lines}</div><div class="stat-l">Lines</div></div>
+    <div class="stat"><div class="stat-v">${words}</div><div class="stat-l">Words</div></div>
+    <div class="stat"><div class="stat-v">${d.bpm||'—'}</div><div class="stat-l">BPM</div></div>
+  </div>
+  <div class="q-row">
+    <span class="q-lbl">Quality Score</span>
+    <div class="q-track"><div class="q-fill ${qClass}" style="width:${q}%"></div></div>
+    <span class="q-score ${qClass}">${q}/100</span>
+  </div>`;
+
+  if(d.style){ html += `<div class="style-blk"><div class="style-hd">Style Notes</div>${esc(d.style)}</div>`; }
+
+  d.sections.forEach(s=>{
+    html += `<div class="lsec"><div class="sec-hd">${esc(s.name)}</div><div class="sec-body">${esc(s.lyrics)}</div></div>`;
+  });
+
+  html += `<div class="out-actions">
+    <button class="btn-act" onclick="copyAll()">COPY ALL</button>
+    <button class="btn-act" onclick="generate()">REGENERATE</button>
+    <span class="model-badge">via ${model}</span>
+  </div>`;
+
+  document.getElementById('out').innerHTML = html;
+  setTimeout(()=>{ document.querySelectorAll('.q-fill').forEach(el=>{ const w=el.style.width; el.style.width='0'; setTimeout(()=>el.style.width=w,50); }); },100);
+}
+
+function renderRaw(text, model){
+  document.getElementById('out').innerHTML = `
+  <div class="raw-txt">${esc(text)}</div>
+  <div class="out-actions">
+    <button class="btn-act" onclick="copyAll()">COPY ALL</button>
+    <button class="btn-act" onclick="generate()">REGENERATE</button>
+    <span class="model-badge">via ${model}</span>
+  </div>`;
+}
+
+function copyAll(){
+  const txt = document.getElementById('out').innerText;
+  navigator.clipboard.writeText(txt).then(()=>{
+    const btn = event.target;
+    btn.textContent='COPIED ✓'; btn.classList.add('copied');
+    setTimeout(()=>{ btn.textContent='COPY ALL'; btn.classList.remove('copied'); },2000);
+  });
+}
+</script>
+</body>
+</html>

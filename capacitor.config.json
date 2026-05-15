@@ -1,0 +1,13 @@
+{
+  "appId": "com.lyrix.app",
+  "appName": "LYRIX",
+  "webDir": "www",
+  "android": {
+    "buildOptions": {
+      "releaseType": "APK"
+    }
+  },
+  "server": {
+    "androidScheme": "https"
+  }
+}
