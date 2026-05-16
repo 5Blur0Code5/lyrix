@@ -778,7 +778,7 @@ function callGemini(key, model, prompt){
   return fetch(`https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${key}`,{
     method:'POST',
     headers:{'Content-Type':'application/json'},
-    body:JSON.stringify({ contents:[{ parts:[{ text:prompt }] }], generationConfig:{ temperature:1.1, maxOutputTokens:2048 } })
+    body:JSON.stringify({ contents:[{ parts:[{ text:prompt }] }], generationConfig:{ temperature:1.1, maxOutputTokens:8192 } })
   });
 }
 
